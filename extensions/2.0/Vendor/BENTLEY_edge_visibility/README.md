@@ -1,0 +1,32 @@
+<!--
+Copyright 2015-2021 The Khronos Group Inc.
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
+# BENTLEY_edge_visibility
+
+## Contributors
+
+* Paul Connelly, Bentley Systems, [@pmconne](https://github.com/pmconne)
+
+## Status
+
+Draft
+
+## Dependencies
+
+Written against the glTF 2.0 spec.
+
+## Overview
+
+Non-photorealistic 3D surfaces, such as untextured buildings, are often more visually compelling when their edges are outlined. Such visualizations are common in computer-aided drafting environments like Revit and MicroStation. A simplistic approach to adding outlines to a glTF model would be to include additional primitives of type `LINES` representing the visible edges of the model. However, this approach suffers from z-fighting between the lines and their triangles.
+
+The [CESIUM_primitive_outline](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/CESIUM_primitive_outline/README.md) extension addresses a subset of the problem by permitting the edges of the surfaces to be specified as indices into the surfaces' own vertex buffers, leaving the details of how to render the edges without z-fighting up to the implementation. However, this approach has a few limitations:
+- The surface geometry must be represented as indexed `TRIANGLES` primitives.
+- The edges must be drawn using the same material as the surface.
+- The representation of the edges as pairs of vertex indices can increase the amount of geometry in the model significantly.
+- The edges are always visible - conditionally-visible interior edges ("silhouettes", as described below) are not supported.
+
+The `BENTLEY_edge_visibility` extension addresses the above limitations by compactly encoding the visibility of each edge of any triangle mesh, including conditionally-visible silhouette edges and, optionally, a set of primitives that can be used to render some or all of the edges.
+
+
