@@ -33,6 +33,12 @@ The `BENTLEY_edge_visibility` extension addresses the above limitations by compa
 
 ## Types of edges
 
-
+[
+  boundary edge = only one triangle (unshared edge) - special case of "hard" edge
+  hard edge = always visible (not a curved surface) - are hard edges and curved edges mutually exclusive?
+    A hard boundary edge can come from the perimeter of a curved surface
+  silhouette edge = conditionally visible, between two triangles, always from a curved surface?
+  Yeah I think silhouette = shared edge between two faces of a curved surface
+]
 
 
