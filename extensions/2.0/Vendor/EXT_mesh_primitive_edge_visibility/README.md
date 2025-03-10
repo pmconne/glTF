@@ -3,7 +3,7 @@ Copyright 2015-2021 The Khronos Group Inc.
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# BENTLEY_edge_visibility
+# EXT_mesh_primitive_edge_visibility
 
 ## Contributors
 
@@ -18,6 +18,35 @@ Draft
 Written against the glTF 2.0 spec.
 
 ## Overview
+
+3D modeling and computer-aided drafting environments like SketchUp, MicroStation, and Revit provide non-photorealistic visualizations that render 3D objects with their edges outlined. The edges can improve the readability of complex models and convey semantics of the underlying topology. The EXT_mesh_primitive_edge_visibility extension encodes the visibility of each edge in a triangle mesh and optionally includes additional primitives that can be used to render some or all of the edges.
+
+The image below illustrates the typical outlined rendering of a cylinder, with 
+
+<figure>
+<img src="./figures/outline.png"/>
+<figcaption><em><b>Figure 1</b> Outlined cylinder mesh</em></figcaption>
+</figure>
+
+Multiple partial solutions to this problem exist using glTF. One of the simplest approaches uses only the information provided by the triangle mesh itself to produce a wiremesh rendering in which every edge of every triangle is visible, as shown below.
+
+<figure>
+<img src="./figures/wiremesh.png"/>
+<figcaption><em><b>Figure 2</b> Wiremesh rendering of triangle edges</em></figcaption>
+</figure>
+
+[for toon, use iTwin.js emphasis shader with no edges]
+
+[
+  Alternatives:
+    Wiremesh
+    Toon shader
+    Line primitives
+    CESIUM_primitive_outline
+]
+
+
+[other alternative solutions include fragment shader silhouettes ("toon shaders") which lack accuracy required in many engineering and modeling workflows]
 
 [TODO: Talk about preserving edge information when producing low-level facets from higher-level geometry like solids and surfaces. You can't infer from facet edges.]
 
@@ -41,4 +70,10 @@ The `BENTLEY_edge_visibility` extension addresses the above limitations by compa
   Yeah I think silhouette = shared edge between two faces of a curved surface
 ]
 
-
+[
+  impls MAY render the edge primitives provided
+  all edge visibility must be encoded including the edges that have corresponding primitives
+  BENTLEY_primitive_restart may be applied to the primitives
+    Relevant to naming discussion for that extension?
+  Edges MUST draw in front of triangles. No specific implementation prescribed. Some examples.
+]
