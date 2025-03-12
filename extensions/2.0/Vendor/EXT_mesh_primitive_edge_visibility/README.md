@@ -84,6 +84,37 @@ The visibility of a given edge shared by a given pair of triangles **MUST** be e
 
 Engines **MUST** render all edges according to their specified visibility values. Engines may choose a material with which to draw the edges - e.g., they could apply the primitive's material to the edges, or apply some uniform material to the edges of all primitives in the scene, or some other consistent option. If engines choose to render the edges specified by the `primitives` property, then they **MUST NOT** also produce their own rendering of the edges with visibility value `3`.
 
+#### Example
+
+Consider the simple example of a pair of adjacent triangles described by the index list `[0,1,2, 0,3,2]`:
+```
+  0______3
+  | ⟍    |
+  |   ⟍  |
+  |_____⟍|
+  1      2
+```
+
+With 2 bits per edge, encoding the visibility of two triangles requires 12 bits. So the visibility buffer must be 2 bytes long, with 4 bits of the second byte going unused. The diagram below shows which edge's visibility will be encoded into each pair of bits.
+
+```
+Byte    0                 1
+       ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐   
+       │0:3│2:0│1:2│0:1│ │   │   │2:0│3:2│   
+       └───┴───┴───┴───┘ └───┴───┴───┴───┘   
+Bit        6   4   2   0     14  12  10  8
+```
+
+Assume that the vertical edges `0:1` and `2:3` are hard edges, the horizontal edges `0:3` and `1:2` are hidden edges, and the shared diagonal edge `0:2` is a silhouette edge. Then the corresponding visibility values would be `[2,0,1, 0,2,1]`. However, we must ensure that the visibility of the shared edge is encoded only once, so after replacing one of the redundant `1`s the visibility values are `[2,0,1, 0,2,0]`. Encoding the edge visibility produces the sequence of bytes `[146, 2]`, as illustrated below.
+
+```
+Byte    0                 1
+       ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐   
+Binary │ 10│ 01│ 00│ 10│ │ 00│ 00│ 00│ 10│
+       └───┴───┴───┴───┘ └───┴───┴───┴───┘   
+Decimal              146                 2
+```
+
 ### Edge Primitives
 
 The extension's `primitives` property optionally provides an array of primitives of topology type 1 (lines), 2 (line loop), and/or 3 (line strip) representing all or a subset of the hard edges encoded in the `visibility` property. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a filled green shape. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges.
@@ -94,14 +125,11 @@ All edges included in `primitives` **MUST** be encoded with visibility value `3`
 
 The extension's `silhouetteNormals` property specifies the index of an accessor providing normal vectors for silhouette edges. For each edge encoded as a silhouette (visibility value `2`) in `visibility`, the silhouette normals buffer provides the outward-facing normal vectors for the pair of faces sharing the edge. Each normal vector is compressed into 16 bits using the "oct16" encoding described [here](https://jcgt.org/published/0003/02/01/). The ordering of the normal vector pairs corresponds to the ordering of the edges in `visibility`; that is, the first pair of normals corresponds to the first edge encoded with visibility `2`, the second pair to the second occurrence of visibility `2`; and so on.
 
-Engines **MUST** render a silhouette edge if any only if one of the adjacent faces is front-facing and the other is back-facing, as determined by their normal vectors.
+Engines should render a silhouette edge unless both adjacent faces are front-facing or both are back-facing as determined by their normal vectors.
 
 ### Constraints
 
 If `visibility` contains any visibility values of `3`, the extension's `primitives` property **MUST** be defined.
-
-## Example
-
 
 ## JSON Schema
 
