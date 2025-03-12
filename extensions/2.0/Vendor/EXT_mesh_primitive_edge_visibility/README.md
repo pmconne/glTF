@@ -21,7 +21,7 @@ Written against the glTF 2.0 spec.
 
 3D modeling and computer-aided drafting environments like SketchUp, MicroStation, and Revit provide non-photorealistic visualizations that render 3D objects with their edges visible. The edges can improve the readability of complex models and convey semantics of the underlying topology. The `EXT_mesh_primitive_edge_visibility` extension augments a triangle mesh primitive with sufficient information to enable engines to produce such visualizations.
 
-The image below illustrates a typical rendering of a cylinder with its edges. The width of the edges has been exaggerated for emphasis.
+Figure 1 illustrates a typical rendering of a cylinder with its edges. The width of the edges has been exaggerated for emphasis.
 
 <figure>
 <img src="./figures/visible-edges.png"/>
@@ -29,21 +29,19 @@ The image below illustrates a typical rendering of a cylinder with its edges. Th
 </figure>
 
 This image shows both of the two types of edges described by `EXT_mesh_primitive_edge_visibility`.
-- A [silhouette edge](https://en.wikipedia.org/wiki/Silhouette_edge) is any edge separating a front-facing triangle from a back-facing triangle. In the Figure 1, one silhouette is visible along each of the curved left and right sides of the cylinder. Silhouette edges are *conditionally visible* - their visibility is determined at display time based on the camera direction.
-- A hard edge is any edge attached to only a single triangle, or any edge between two logical faces of the 3D object. In the Figure 1, hard edges are visible around the perimeters of the cylinder's circular end caps. Hard edges are *always visible* regardless of the camera direction.
+- A [silhouette edge](https://en.wikipedia.org/wiki/Silhouette_edge) is any edge separating a front-facing triangle from a back-facing triangle. In Figure 1, one silhouette is visible along each of the curved left and right sides of the cylinder. Silhouette edges are *conditionally visible* - their visibility is determined at display time based on the camera direction. In Figure 2, each of the vertical edges encircling the cylinder represents a potential silhouette edge.
+- A hard edge is any edge attached to only a single triangle, or any edge between two logical faces of the 3D object. In Figure 1, hard edges are visible around the perimeters of the cylinder's circular end caps. Hard edges are *always visible* regardless of the camera direction.
 
 ## Shortcomings of Existing Techniques
 
-Various techniques can be applied to a glTF asset to approximate the rendering in Figure 1. One of the simplest approaches uses only the information encoded in the triangle mesh itself to produce a wiremesh rendering in which every edge of every triangle is visible, as shown in Figure 2.
+Various techniques can be applied to a glTF asset to approximate the rendering in Figure 1. The approach illustrated in Figure 2 uses a wiremesh shader to render every edge of every triangle. While the interior edges can be useful for visualizing the structure of the triangle mesh, they obscure the underlying cylinder topology.
 
 <figure>
 <img src="./figures/wiremesh.png"/>
 <figcaption><em><b>Figure 2</b> Triangle edges drawn using a wiremesh technique</em></figcaption>
 </figure>
 
-The interior edges displayed in Figure 2 can be useful for visualizing the structure of the triangle mesh, but they obscure the semantics of the cylinder topology. Note that each of the vertical edges encircling the cylinder in Figure 2 are potential silhouette edges.
-
-Screen-space techniques (e.g., a "toon shader") can be applied to add edges during image post-processing. Such techniques can only approximate the actual edges. The technique used in Figure 3, for example, fails to reconstruct the edges along the top end cap of the cylinder where they fall within the cylinder's volume projected onto the image plane.
+Screen-space techniques (e.g., a "toon" or "outline" shader) can be applied to add edges during image post-processing. Such techniques can only approximate the actual edges. The technique used in Figure 3, for example, fails to reconstruct the edges along the top end cap of the cylinder where they fall within the cylinder's volume projected onto the image plane.
 
 <figure>
 <img src="./figures/outline.png"/>
@@ -57,7 +55,7 @@ The hard edges could be encoded explicitly into the glTF asset as additional pri
 <figcaption><em><b>Figure 4</b> Edges drawn as separate primitives</em></figcaption>
 </figure>
 
-The [CESIUM_primitive_outline](../CESIUM_primitive_outline/README.md) extension attempts to address the depth fighting artifacts shown in Figure 4 by providing an additional index buffer describing each visible edge as a line segment (a pair of indices into the triangle mesh's list of vertices). The extension leaves the details of how to render the edges without depth-fighting up to the engine. This approach satisfies the use case for which it was intended - displaying the edges of boxy, low-resolution buildings - but suffers some limitations:
+The [CESIUM_primitive_outline](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/CESIUM_primitive_outline) extension attempts to address the depth fighting artifacts shown in Figure 4 by providing an additional index buffer describing each visible edge as a line segment (a pair of indices into the triangle mesh's list of vertices). The extension leaves the details of how to render the edges without depth-fighting up to the engine. This approach satisfies the use case for which it was intended - displaying the edges of boxy, low-resolution buildings - but suffers some limitations:
 - The surface geometry must be represented as indexed triangles.
 - Silhouette edges are not supported.
 - The representation of the edges are pairs of vertex indices can significantly increase the size of the glTF asset.
@@ -70,7 +68,7 @@ The [CESIUM_primitive_outline](../CESIUM_primitive_outline/README.md) extension 
 
 ## glTF Schema Updates
 
-The `EXT_mesh_primitive_edge_visibility` extension is applied to a mesh primitive of topology type 4 (triangles), 5 (triangle strip), or 6 (triangle fan) that uses indexed or non-indexed geometry.
+The `EXT_mesh_primitive_edge_visibility` extension is applied to a mesh primitive of topology type 4 (triangles), 5 (triangle strip), or 6 (triangle fan) that uses indexed or non-indexed geometry. It provides the information required for engines to produce a rendering of the primitive's edges. Engines are not *required* to always render the edges - they may, for example, allow the user to toggle edge visibility on and off - but when rendering the edges they must do so as specified below.
 
 ### Edge Visibility
 
@@ -80,16 +78,23 @@ The visibility of a single edge is specified using 2 bits as one of the followin
 - 2: Hard edge - the edge should always be drawn.
 - 3: Hard edge encoded in `primitives` - a representation of the edge is included in the extension's `primitives` property. The edge should always be drawn, either by drawing the `primitives` array or by drawing it like an edge with visibility value `2`.
 
-The extension's `visibility` property specifies the index of an accessor of `SCALAR` type and `UNSIGNED BYTE` component type that encodes as a bitfield the visibility of every edge of every triangle in the mesh. The ordering of triangles and vertices is as described by section 3.7.2.1 of the glTF 2.0 specification. For each triangle `(v0, v1, v2)`, the bitfield encodes three visibility values for the edges `(v0:v1, v1:v2, v2:v0)` in that order. Therefore, the number of bytes in the bitfield **MUST** be `6 * N / 8` rounded up to the nearest whole number, where `N` is the number of triangles in the primitive.
-[Mention ordering of triangles when primitive restart extension is present?]
+The extension's `visibility` property specifies the index of an accessor of `SCALAR` type and `UNSIGNED BYTE` component type that encodes as a bitfield the visibility of every edge of every triangle in the mesh. The ordering of triangles and vertices is as described by [Section 3.7.2.1](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#meshes-overview) of the glTF 2.0 specification. For each triangle `(v0, v1, v2)`, the bitfield encodes three visibility values for the edges `(v0:v1, v1:v2, v2:v0)` in that order. Therefore, the number of bytes in the bitfield **MUST** be `6 * N / 8` rounded up to the nearest whole number, where `N` is the number of triangles in the primitive.
+
+The visibility of a given edge shared by a given pair of triangles **MUST** be encoded as a non-zero value no more than once. All other occurrences of the same edge in the bitfield **MUST** be encoded as zero, to prevent engines from either producing redundant geometry for shared edges or having to manually detect and account for such redundancies.
 
 Engines **MUST** render all edges according to their specified visibility values. Engines may choose a material with which to draw the edges - e.g., they could apply the primitive's material to the edges, or apply some uniform material to the edges of all primitives in the scene, or some other consistent option. If engines choose to render the edges specified by the `primitives` property, then they **MUST NOT** also produce their own rendering of the edges with visibility value `3`.
 
 ### Edge Primitives
 
-The extension's `primitives` property optionally provides an array of primitives of topology type 1 (lines), 2 (line loop), and/or 3 (line strip) representing all or a subset of the hard edges encoded in the `visibility` property. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a green shape. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges.
+The extension's `primitives` property optionally provides an array of primitives of topology type 1 (lines), 2 (line loop), and/or 3 (line strip) representing all or a subset of the hard edges encoded in the `visibility` property. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a filled green shape. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges.
 
 All edges included in `primitives` **MUST** be encoded with visibility value `3` in the `visibility` bitfield.
+
+### Silhouette Normals
+
+The extension's `silhouetteNormals` property specifies the index of an accessor providing normal vectors for silhouette edges. For each edge encoded as a silhouette (visibility value `2`) in `visibility`, the silhouette normals buffer provides the outward-facing normal vectors for the pair of faces sharing the edge. Each normal vector is compressed into 16 bits using the "oct16" encoding described [here](https://jcgt.org/published/0003/02/01/). The ordering of the normal vector pairs corresponds to the ordering of the edges in `visibility`; that is, the first pair of normals corresponds to the first edge encoded with visibility `2`, the second pair to the second occurrence of visibility `2`; and so on.
+
+Engines **MUST** render a silhouette edge if any only if one of the adjacent faces is front-facing and the other is back-facing, as determined by their normal vectors.
 
 ### Constraints
 
@@ -100,11 +105,16 @@ If `visibility` contains any visibility values of `3`, the extension's `primitiv
 
 ## JSON Schema
 
+[./schema/primitive.EXT_mesh_primitive_edge_visibility.schema.json](primitive.EXT_mesh_primitive_edge_visibility.schema.json)
 
 ## Implementation Notes
 
 This extension does not dictate any specific rendering technique. It only requires that the edges be drawn and that they avoid depth-fighting wit the corresponding surfaces. [TODO example implementations].
 
+[the buffers are not intended to be sent directly to the GPU, they are optimized for size and require implementation-defined processing during decoding]
+[Link to PR that introduced this optimization https://github.com/iTwin/itwinjs-core/pull/5581 noting tradeoff between storing normal pair vs index of third triangle vertex]
+[Link to implementation of oct-decoding on GPU and oct-encoding on CPU]
+[Link to implementation of traversal algorithm used when constructing the edge table and indices]
 
 [
   impls MAY render the edge primitives provided
@@ -116,9 +126,10 @@ This extension does not dictate any specific rendering technique. It only requir
   Edges MUST draw in front of triangles. No specific implementation prescribed. Some examples.
   Visibility of a shared edge is encoded only once; subsequent occurences are encoded as 0 (not visible)
   required: visibility
-  required if any silhouettes in `visibility`: normals
+  required if any silhouettes in `visibility`: silhouetteNormals. and it must specify 2*N normals where N = number of silhouettes.
   required if any entry in `visibility` is `2` indicating hard edge represented in `primitives`: primitives
-  `normals` may use KHR_mesh_quantization -- need to establish how dependencies between extensions is expected to work...
+  `silhouetteNormals` may use KHR_mesh_quantization -- need to establish how dependencies between extensions is expected to work...
+    No that extension only permits the component type to be short or byte, still requires 3 (4-byte-aligned) components.
 ]
 
 [
