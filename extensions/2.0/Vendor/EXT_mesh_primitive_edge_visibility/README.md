@@ -15,7 +15,7 @@ Draft
 
 ## Dependencies
 
-Written against the glTF 2.0 spec.
+Written against the glTF 2.0 spec. Depends on `BENTLEY_primitive_restart` if primitive restart is used.
 
 ## Overview
 
@@ -82,7 +82,7 @@ The extension's `visibility` property specifies the index of an accessor of `SCA
 
 The visibility of a given edge shared by a given pair of triangles **MUST** be encoded as a non-zero value no more than once. All other occurrences of the same edge in the bitfield **MUST** be encoded as zero, to prevent engines from either producing redundant geometry for shared edges or having to manually detect and account for such redundancies.
 
-Engines **MUST** render all edges according to their specified visibility values. Engines may choose a material with which to draw the edges - e.g., they could apply the primitive's material to the edges, or apply some uniform material to the edges of all primitives in the scene, or some other consistent option. If engines choose to render the edges specified by the `primitives` property, then they **MUST** render those primitives according to the glTF 2.0 specification (e.g., using the specified material) and they **MUST NOT** also produce their own rendering of the edges with visibility value `3`.
+Engines **MUST** render all edges according to their specified visibility values. The edges **MUST** draw in front of their corresponding triangles with no depth-fighting. Engines may choose a material with which to draw the edges - e.g., they could apply the primitive's material to the edges, or apply some uniform material to the edges of all primitives in the scene, or some other consistent option. If engines choose to render the edges specified by the `primitives` property, then they **MUST** render those primitives according to the glTF 2.0 specification (e.g., using the specified material) and they **MUST NOT** also produce their own rendering of the edges with visibility value `3`.
 
 #### Example
 
@@ -117,15 +117,19 @@ Decimal              18                 2
 
 ### Edge Primitives
 
-The extension's `primitives` property optionally provides an array of primitives of topology type 1 (lines), 2 (line loop), and/or 3 (line strip) representing all or a subset of the hard edges encoded in the `visibility` property. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a filled green shape. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges.
+The extension's `primitives` property optionally provides an array of primitives representing all of the hard edges encoded with visibility value `3` in the `visibility` property. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a filled green shape.
 
-All edges included in `primitives` **MUST** be encoded with visibility value `3` in the `visibility` bitfield.
+The `primitives` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `3` in `visibility`.
+
+The `BENTLEY_primitive_restart` extension *may* be applied to the `primitives` property.
 
 ### Silhouette Normals
 
-The extension's `silhouetteNormals` property specifies the index of an accessor providing normal vectors for silhouette edges. For each edge encoded as a silhouette (visibility value `2`) in `visibility`, the silhouette normals buffer provides the outward-facing normal vectors for the pair of triangles sharing the edge. Each normal vector is compressed into 16 bits using the "oct16" encoding described [here](https://jcgt.org/published/0003/02/01/). The ordering of the normal vector pairs corresponds to the ordering of the edges in `visibility`; that is, the first pair of normals corresponds to the first edge encoded with visibility `2`, the second pair to the second occurrence of visibility `2`; and so on.
+The extension's `silhouetteNormals` property specifies the index of an accessor providing normal vectors used to determine the visibility of silhouette edges at display time. For each edge encoded as a silhouette (visibility value `1`) in `visibility`, the silhouette normals buffer provides the two outward-facing normal vectors of the pair of triangles sharing the edge. Each normal vector is compressed into 16 bits using the "oct16" encoding described [here](https://jcgt.org/published/0003/02/01/). The ordering of the normal vector pairs corresponds to the ordering of the edges in `visibility`; that is, the first pair of normals corresponds to the first edge encoded with visibility `1`, the second pair to the second occurrence of visibility `1`; and so on.
 
-Engines should render a silhouette edge unless both adjacent triangles are front-facing or both are back-facing as determined by their normal vectors.
+Engines should render a silhouette edge unless both adjacent triangles are front-facing or both are back-facing, as determined by their normal vectors.
+
+The `silhouetteNormals` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `1` in `visibility`.
 
 ### Constraints
 
@@ -137,33 +141,16 @@ If `visibility` contains any visibility values of `3`, the extension's `primitiv
 
 ## Implementation Notes
 
-
 [TODO example implementations].
 
-[the buffers are not intended to be sent directly to the GPU, they are optimized for size and require implementation-defined processing during decoding]
-[Link to PR that introduced this optimization https://github.com/iTwin/itwinjs-core/pull/5581 noting tradeoff between storing normal pair vs index of third triangle vertex]
-[Link to implementation of oct-decoding on GPU and oct-encoding on CPU]
-[Link to implementation of traversal algorithm used when constructing the edge table and indices, talk about handling primitive restart too]
-[example of populating the edge visibility buffer]
 
-[
-  impls MAY render the edge primitives provided
-  all edge visibility must be encoded including the edges that have corresponding primitives
-  BENTLEY_primitive_restart may be applied to the primitives
-    Relevant to naming discussion for that extension?
-    Need to establish how dependencies between extensions is expected to work...
-      KHR_mesh_quantization depends upon KHR_texture_transform
-  Edges MUST draw in front of triangles. No specific implementation prescribed. Some examples.
-  Visibility of a shared edge is encoded only once; subsequent occurences are encoded as 0 (not visible)
-  required: visibility
-  required if any silhouettes in `visibility`: silhouetteNormals. and it must specify 2*N normals where N = number of silhouettes.
-  required if any entry in `visibility` is `2` indicating hard edge represented in `primitives`: primitives
-  `silhouetteNormals` may use KHR_mesh_quantization -- need to establish how dependencies between extensions is expected to work...
-    No that extension only permits the component type to be short or byte, still requires 3 (4-byte-aligned) components.
-]
+###TODO
 
-[
-  probably don't REQUIRE edges to be drawn - the edge visibility can be used for other purposes
-  or at least, apps may want option to turn edge display on and off
-]
+[ ] [the buffers are not intended to be sent directly to the GPU, they are optimized for size and require implementation-defined processing during decoding]
+[ ] [Link to PR that introduced this optimization https://github.com/iTwin/itwinjs-core/pull/5581 noting tradeoff between storing normal pair vs index of third triangle vertex]
+[ ] [Link to implementation of oct-decoding on GPU and oct-encoding on CPU]
+[ ] [Link to implementation of traversal algorithm used when constructing the edge table and indices, talk about handling primitive restart too]
+[ ] [example of populating the edge visibility buffer]
+
+[ ] examples of how to mitigate depth-fighting
 
