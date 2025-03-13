@@ -119,9 +119,9 @@ Decimal              18                 2
 
 The extension's `primitives` property optionally provides an array of primitives representing all of the hard edges encoded with visibility value `3` in the `visibility` property. Engines should render these primitives directly, in which case they **MUST** do so without depth-fighting and **MUST NOT** also produce their own rendering of these edges. The primary use case is for edges that should be drawn using a different material than the corresponding surface - for example, a red outline drawn around a filled green shape.
 
-The `primitives` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `3` in `visibility`.
-
 The `BENTLEY_primitive_restart` extension *may* be applied to the `primitives` property.
+
+The `primitives` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `3` in `visibility`.
 
 ### Silhouette Normals
 
@@ -129,11 +129,7 @@ The extension's `silhouetteNormals` property specifies the index of an accessor 
 
 Engines should render a silhouette edge unless both adjacent triangles are front-facing or both are back-facing, as determined by their normal vectors.
 
-The `silhouetteNormals` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `1` in `visibility`.
-
-### Constraints
-
-If `visibility` contains any visibility values of `3`, the extension's `primitives` property **MUST** be defined.
+The `silhouetteNormals` property **MUST** be defined *if and only if* at least one edge is encoded with visibility value `1` in `visibility`. The buffer's byte length must be equal to `4 * N` where `N` is the number of edges encoded with visibility value `1`.
 
 ## JSON Schema
 
