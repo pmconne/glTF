@@ -137,16 +137,12 @@ The `silhouetteNormals` property **MUST** be defined *if and only if* at least o
 
 ## Implementation Notes
 
-[TODO example implementations].
+Example routines for encoding and decoding of oct16 normal vectors:
 
+- [GLSL](https://jcgt.org/published/0003/02/01/) (Section 3.1)
+- [JavaScript](https://github.com/CesiumGS/cesium/blob/dd9c25b652460e8cd77ecd29fbbf7cc44d8b62a2/packages/engine/Source/Core/AttributeCompression.js#L77)
+- [C++](https://github.com/iTwin/imodel-native/blob/4f0a5008dba61124b490a7506a6cd82ce1b8f148/iModelCore/iModelPlatform/PublicAPI/DgnPlatform/Render.h#L2012)
 
-###TODO
+The [pull request](https://github.com/iTwin/itwinjs-core/pull/5581) that informed the design of this extension provides [an iterator](https://github.com/iTwin/itwinjs-core/blob/03b760e1e91bde5221aa7370ea45c52f966e3368/core/frontend/src/common/imdl/CompactEdges.ts#L42) over the `visibility` and `silhouetteNormals` buffers.
 
-[ ] [the buffers are not intended to be sent directly to the GPU, they are optimized for size and require implementation-defined processing during decoding]
-[ ] [Link to PR that introduced this optimization https://github.com/iTwin/itwinjs-core/pull/5581 noting tradeoff between storing normal pair vs index of third triangle vertex]
-[ ] [Link to implementation of oct-decoding on GPU and oct-encoding on CPU]
-[ ] [Link to implementation of traversal algorithm used when constructing the edge table and indices, talk about handling primitive restart too]
-[ ] [example of populating the edge visibility buffer]
-
-[ ] examples of how to mitigate depth-fighting
-
+iTwin.js [implements](https://github.com/iTwin/itwinjs-core/blob/03b760e1e91bde5221aa7370ea45c52f966e3368/core/frontend/src/internal/render/webgl/glsl/Edge.ts#L107) conditional display of silhouette edges. It draws edges in a separate pass from surfaces to [ensure](https://github.com/iTwin/itwinjs-core/blob/03b760e1e91bde5221aa7370ea45c52f966e3368/core/frontend/src/internal/render/webgl/glsl/FeatureSymbology.ts#L426) the mitigate z-fighting.
